@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard FRT – Fertirrigação Viana 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f4f0; color: #2c2c2a; min-height: 100vh; }
+
+  header { background: #f0f0ec; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  header h1 { color: lab(0% 0 0); font-size: 28px; font-weight: 600; letter-spacing: .01em; }
+  .header-meta { display: flex; gap: 20px; }
+  .header-meta span { color: lab(5.53% 2.08 0.73 / 0.75); font-size: 12px; }
+  .header-meta strong { color: #000000; font-weight: 600; }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 28px 24px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .kpi { border-radius: 10px; padding: 18px 20px; }
+  .kpi-red  { background: #9B2124; }
+  .kpi-dark { background: #CA2535; }
+  .kpi-mid  { background: #b82229; }
+  .kpi-light { background: #fff; border: 0.5px solid #ddd; }
+  .kpi-red .kpi-label,  .kpi-red .kpi-value,  .kpi-red .kpi-sub,
+  .kpi-dark .kpi-label, .kpi-dark .kpi-value, .kpi-dark .kpi-sub,
+  .kpi-mid .kpi-label,  .kpi-mid .kpi-value,  .kpi-mid .kpi-sub { color: #fff; }
+  .kpi-light .kpi-label, .kpi-light .kpi-sub { color: #888; }
+  .kpi-light .kpi-value { color: #2c2c2a; }
+  .kpi-label { font-size: 12px; margin-bottom: 4px; }
+  .kpi-value { font-size: 24px; font-weight: 700; margin-bottom: 2px; }
+  .kpi-sub { font-size: 11px; opacity: .85; }
+
+  .section-title { font-size: 11px; font-weight: 700; color: #9B2124; text-transform: uppercase; letter-spacing: .08em; margin: 28px 0 12px; border-left: 3px solid #9B2124; padding-left: 8px; }
+
+  .card { background: #fff; border-radius: 12px; border: 0.5px solid #e0e0d8; padding: 18px 20px; }
+  .card + .card { margin-top: 14px; }
+  .chart-label { font-size: 13px; color: #555; margin-bottom: 10px; font-weight: 500; }
+
+  .charts-row-3 { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .charts-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 780px) { .charts-row-3, .charts-row-2 { grid-template-columns: 1fr; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-size: 11px; color: #666; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-box { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 8px 10px; color: #9B2124; font-weight: 700; border-bottom: 1.5px solid #9B2124; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+  td { padding: 7px 10px; border-bottom: 0.5px solid #f0f0ec; color: #2c2c2a; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fdf8f8; }
+
+  .bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .bar-bg { background: #f0f0ec; border-radius: 3px; height: 7px; flex: 1; min-width: 40px; }
+  .bar-fill-red { border-radius: 3px; height: 7px; background: #9B2124; }
+  .bar-fill-pink { border-radius: 3px; height: 7px; background: rgba(202,37,53,0.4); }
+
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .b-ok   { background: #e8f5e2; color: #2d6a1a; }
+  .b-neg  { background: #fde8e9; color: #9B2124; }
+  .b-zero { background: #f0f0ec; color: #888; }
+  .b-crit { background: #fff3cd; color: #7a5a00; }
+
+  .divider { height: 1px; background: #eee; margin: 24px 0; }
+
+  footer { text-align: center; padding: 24px; font-size: 11px; color: #aaa; }
+  footer strong { color: #9B2124; }
+</style>
+</head>
+<body>
+
+<header>
+
+<img src="https://ocbgdeknqnajwrucywpx.supabase.co/storage/v1/object/public/Logo%20Heringer/Logotipo%20A%20Horizontal.png" alt="Heringer" style="height:100px;">
+  <h1>Fertirrigação · Viana</h1>
+  <div class="header-meta">ss
+    <span>Período: <strong>Jan–Jun 2026</strong></span>
+    <span>Centro: <strong>E90R · VNA</strong></span>
+    <span>Atualizado: <strong>Jul/2026</strong></span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi kpi-red">
+      <div class="kpi-label">📦 Estoque Inicial</div>
+      <div class="kpi-value">410,4 t</div>
+      <div class="kpi-sub">01/01/2026</div>
+    </div>
+    <div class="kpi kpi-mid">
+      <div class="kpi-label">📥 Total Entradas</div>
+      <div class="kpi-value">409,6 t</div>
+      <div class="kpi-sub">Jan–Jun 2026</div>
+    </div>
+    <div class="kpi kpi-dark">
+      <div class="kpi-label">📤 Total Saídas</div>
+      <div class="kpi-value">604,3 t</div>
+      <div class="kpi-sub">movimentação total</div>
+    </div>
+    <div class="kpi kpi-light">
+      <div class="kpi-label">🏭 Estoque Final</div>
+      <div class="kpi-value">215,6 t</div>
+      <div class="kpi-sub">posição atual</div>
+    </div>
+    <div class="kpi kpi-light">
+      <div class="kpi-label">🚚 Total Faturado</div>
+      <div class="kpi-value">166,6 t</div>
+      <div class="kpi-sub">21 NFs · 6 clientes</div>
+    </div>
+    <div class="kpi kpi-light">
+      <div class="kpi-label">📍 Estados</div>
+      <div class="kpi-value">ES · MG · RJ</div>
+      <div class="kpi-sub">ES 86% · MG 11% · RJ 3%</div>
+    </div>
+  </div>
+
+  <!-- Linha 1: Mensal + UF + Clientes -->
+  <div class="section-title">Faturamento</div>
+  <div class="charts-row-3">
+    <div class="card">
+      <div class="chart-label">Volume mensal faturado (t)</div>
+      <div class="legend">
+        <span><span class="leg-box" style="background:#9B2124;"></span>Faturado (t)</span>
+      </div>
+      <div style="position:relative;height:200px;">
+        <canvas id="cMes"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chart-label">Distribuição por estado</div>
+      <div class="legend">
+        <span><span class="leg-box" style="background:#9B2124;"></span>ES 142,6 t</span>
+        <span><span class="leg-box" style="background:#CA2535;opacity:.6;"></span>MG 19 t</span>
+        <span><span class="leg-box" style="background:#e08090;"></span>RJ 5 t</span>
+      </div>
+      <div style="position:relative;height:200px;">
+        <canvas id="cUF"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chart-label">Volume por cliente (t)</div>
+      <div style="position:relative;height:200px;">
+        <canvas id="cCliente"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Linha 2: Estoque vs movimentação -->
+  <div class="section-title">Movimentação de estoque</div>
+  <div class="charts-row-2">
+    <div class="card">
+      <div class="chart-label">Top produtos — Estoque inicial vs Saídas (t)</div>
+      <div class="legend">
+        <span><span class="leg-box" style="background:#9B2124;"></span>Est. Inicial</span>
+        <span><span class="leg-box" style="background:rgba(202,37,53,0.4);"></span>Saídas</span>
+      </div>
+      <div style="position:relative;height:260px;">
+        <canvas id="cMovProd"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chart-label">Entradas × Saídas × Saldo final — top 8 (t)</div>
+      <div class="legend">
+        <span><span class="leg-box" style="background:#9B2124;"></span>Entradas</span>
+        <span><span class="leg-box" style="background:rgba(155,33,36,0.35);"></span>Saídas</span>
+        <span><span class="leg-box" style="background:#f5c0c2;"></span>Est. Final</span>
+      </div>
+      <div style="position:relative;height:260px;">
+        <canvas id="cEntSai"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela consolidada -->
+  <div class="section-title">Consolidado completo por produto</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Produto</th>
+          <th style="text-align:right">Est. Inicial (t)</th>
+          <th style="text-align:right">Entradas (t)</th>
+          <th style="text-align:right">Saídas (t)</th>
+          <th style="text-align:right">Est. Final (t)</th>
+          <th style="min-width:90px">Consumo</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer><strong>Heringer Fertilizantes · FRT Fertirrigação · VNA</strong> &nbsp;·&nbsp;Jul/2026</footer>
+
+<script>
+const tc = '#777';
+const grid = 'rgba(0,0,0,0.05)';
+
+// Mensal
+new Chart(document.getElementById('cMes'), {
+  type: 'bar',
+  data: {
+    labels: ['Jan/26','Mar/26','Abr/26','Mai/26','Jun/26'],
+    datasets: [{ label: 'Faturado (t)', data: [3.25, 52.25, 43.75, 56.10, 11.20],
+      backgroundColor: ['#9B2124','#9B2124','#9B2124','#9B2124','#CA2535'],
+      borderRadius: 5, borderSkipped: false }]
+  },
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)} t` } } },
+    scales: { x: { ticks: { color: tc, font:{size:11} }, grid: { color: grid } },
+              y: { ticks: { color: tc, callback: v => v+'t' }, grid: { color: grid } } } }
+});
+
+// UF
+new Chart(document.getElementById('cUF'), {
+  type: 'doughnut',
+  data: {
+    labels: ['ES (86%)','MG (11%)','RJ (3%)'],
+    datasets: [{ data: [142.55, 19, 5], backgroundColor: ['#9B2124','rgba(202,37,53,0.55)','#e08090'], borderWidth: 0, hoverOffset: 8 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(2)}t` } } } }
+});
+
+// Clientes
+const clientes = ['TCM Comércio', 'H2N Abreu', 'Martins & Silva', 'Casa Agri', 'Agro Altoé', 'Burgarelli'];
+const cliVol   = [77.85, 58.50, 19.00, 5.00, 4.00, 2.20];
+new Chart(document.getElementById('cCliente'), {
+  type: 'bar',
+  data: {
+    labels: clientes,
+    datasets: [{ label: 'Volume (t)', data: cliVol,
+      backgroundColor: ['#9B2124','#b82229','#CA2535','rgba(202,37,53,0.6)','rgba(202,37,53,0.4)','rgba(202,37,53,0.25)'],
+      borderRadius: 4, borderSkipped: false }]
+  },
+  options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { color: tc, callback: v => v+'t', font:{size:10} }, grid: { color: grid } },
+              y: { ticks: { color: tc, font: { size: 10 } }, grid: { display: false } } } }
+});
+
+// Mov por produto (top 8 por est inicial)
+const top8 = [
+  { p: 'Nitrato Ca 15,5+18CA EC2', ei: 88.97, sai: 38.00 },
+  { p: 'MAP 11-60-00 SLB FR',      ei: 52.70, sai: 140.875 },
+  { p: '07.05.40 AQ',              ei: 43.975, sai: 1.025 },
+  { p: '00.00.01+17B',             ei: 43.940, sai: 13.460 },
+  { p: 'MKP 00-52-34 EC2',         ei: 38.925, sai: 8.000 },
+  { p: 'MAP 12-61-00 EC2',         ei: 26.200, sai: 24.500 },
+  { p: 'Sulfato Mg EC2',           ei: 24.930, sai: 30.475 },
+  { p: 'KCL 00-00-62',             ei: 18.530, sai: 18.638 },
+];
+new Chart(document.getElementById('cMovProd'), {
+  type: 'bar',
+  data: {
+    labels: top8.map(d => d.p),
+    datasets: [
+      { label: 'Est. Inicial', data: top8.map(d => d.ei), backgroundColor: '#9B2124', borderRadius: 3 },
+      { label: 'Saídas',       data: top8.map(d => d.sai), backgroundColor: 'rgba(202,37,53,0.38)', borderRadius: 3 }
+    ]
+  },
+  options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { color: tc, callback: v => v+'t', font:{size:10} }, grid: { color: grid } },
+              y: { ticks: { color: tc, font: { size: 10 } }, grid: { display: false } } } }
+});
+
+// Entradas x Saídas x Est Final
+const top8b = [
+  { p: '44.00.00 CUB',      ent: 267.935, sai: 264.226, ef: 3.709 },
+  { p: 'MAP 11-60-00',      ent: 90.250,  sai: 140.875, ef: 2.075 },
+  { p: 'Nitrato Ca 15,5',   ent: 19.000,  sai: 38.000,  ef: 69.970 },
+  { p: 'Sulfato Mg EC2',    ent: 8.000,   sai: 30.475,  ef: 2.455 },
+  { p: '00.00.01+17B',      ent: 6.324,   sai: 13.460,  ef: 36.804 },
+  { p: 'Sulf K MG EC2',     ent: 5.200,   sai: 22.400,  ef: 0 },
+  { p: 'MKP 00-52-34 EC2',  ent: 4.000,   sai: 8.000,   ef: 34.925 },
+  { p: '13.40.13 AQ',       ent: 3.400,   sai: 4.400,   ef: 1.200 },
+];
+new Chart(document.getElementById('cEntSai'), {
+  type: 'bar',
+  data: {
+    labels: top8b.map(d => d.p),
+    datasets: [
+      { label: 'Entradas',   data: top8b.map(d => d.ent), backgroundColor: '#9B2124', borderRadius: 3 },
+      { label: 'Saídas',     data: top8b.map(d => d.sai), backgroundColor: 'rgba(155,33,36,0.35)', borderRadius: 3 },
+      { label: 'Est. Final', data: top8b.map(d => d.ef),  backgroundColor: '#f5c0c2', borderRadius: 3 },
+    ]
+  },
+  options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { color: tc, callback: v => v+'t', font:{size:10} }, grid: { color: grid } },
+              y: { ticks: { color: tc, font: { size: 10 } }, grid: { display: false } } } }
+});
+
+// Tabela completa
+const rows = [
+  { p: 'NITRATO CALCIO 15,5-00-00+18CA SLB EC2',         ei: 88.970, ent: 19.000, sai: 38.000,   ef: 69.970 },
+  { p: 'MAP CRISTAL 11-60-00 SLB FR',                     ei: 52.700, ent: 90.250, sai: 140.875,  ef: 2.075  },
+  { p: '07.05.40 SLB AQ NTRFS',                           ei: 43.975, ent: 1.000,  sai: 1.025,    ef: 43.950 },
+  { p: '00.00.01+17B SLB',                                ei: 43.940, ent: 6.324,  sai: 13.460,   ef: 36.804 },
+  { p: 'MKP 00-52-34 SLB EC2',                            ei: 38.925, ent: 4.000,  sai: 8.000,    ef: 34.925 },
+  { p: 'MAP CRISTAL 12-61-00 SLB FR EC2',                 ei: 26.200, ent: 0,      sai: 24.500,   ef: 1.700  },
+  { p: 'SULFATO DE MAGNESIO 9MG+11S SLB EC2',             ei: 24.930, ent: 8.000,  sai: 30.475,   ef: 2.455  },
+  { p: 'KCL 00-00-62 SLB',                                ei: 18.530, ent: 0.108,  sai: 18.638,   ef: 0      },
+  { p: '44.00.00+0,4B+0,15CU',                            ei: 18.000, ent: 0,      sai: 18.000,   ef: 0      },
+  { p: 'SULFATO K MG 00-00-01+9MG+11,8S SLB EC2',         ei: 17.200, ent: 5.200,  sai: 22.400,   ef: 0      },
+  { p: 'NITRATO CALCIO 15-00-00+18CA SLB EC2',            ei: 11.000, ent: 0,      sai: 11.000,   ef: 0      },
+  { p: 'CLORETO CALCIO 27CA SLB PO EC2',                  ei: 7.000,  ent: 0,      sai: 0,        ef: 7.000  },
+  { p: 'NITRATO CALCIO 15,5-00-00+18,5CA SLB EC2',        ei: 6.000,  ent: 0,      sai: 6.000,    ef: 0      },
+  { p: 'SULFATO POTASSIO 00-00-50+18S SLB',               ei: 6.000,  ent: 0,      sai: 0,        ef: 6.000  },
+  { p: '13.40.13 SLB AQ NTRFS',                           ei: 2.200,  ent: 3.400,  sai: 4.400,    ef: 1.200  },
+  { p: 'CLORETO CALCIO 27CA SLB PO',                      ei: 2.000,  ent: 0,      sai: 0,        ef: 2.000  },
+  { p: 'NITRATO MAGNESIO 10-00-00+9MG SLB EC2',           ei: 1.460,  ent: 1.460,  sai: 1.460,    ef: 1.460  },
+  { p: '20.05.05 0,02B0,04FE0,025MN SLB AQ NTRFS',        ei: 1.325,  ent: 0.875,  sai: 0.875,    ef: 1.325  },
+  { p: 'MAP CRISTAL 12-61-00 SLB',                         ei: 0,      ent: 2.000,  sai: 1.000,    ef: 1.000  },
+  { p: '44.00.00+0,4B+0,15CU CUB',                        ei: 0,      ent: 267.935,sai: 264.226,  ef: 3.709  },
+];
+
+const tbody = document.getElementById('tBody');
+rows.forEach((r, i) => {
+  const totalMove = r.ei + r.ent;
+  const pct = totalMove > 0 ? (r.sai / totalMove * 100) : 0;
+  let status, sc;
+  if (r.ef === 0 && r.sai > 0) { status = 'Zerado'; sc = 'b-zero'; }
+  else if (pct >= 85) { status = 'Crítico'; sc = 'b-crit'; }
+  else if (r.ef < 0)  { status = 'Negativo'; sc = 'b-neg'; }
+  else if (r.ef > 0 && pct < 50) { status = 'Normal'; sc = 'b-ok'; }
+  else { status = 'Atenção'; sc = 'b-crit'; }
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="color:#bbb;font-size:11px">${i+1}</td>
+    <td style="font-size:11px">${r.p}</td>
+    <td style="text-align:right">${r.ei > 0 ? r.ei.toFixed(3).replace('.',',') : '—'}</td>
+    <td style="text-align:right;color:#2d6a1a">${r.ent > 0 ? '+'+r.ent.toFixed(3).replace('.',',') : '—'}</td>
+    <td style="text-align:right;color:#9B2124">${r.sai > 0 ? r.sai.toFixed(3).replace('.',',') : '—'}</td>
+    <td style="text-align:right;font-weight:700;color:${r.ef===0?'#aaa':'#2c2c2a'}">${r.ef.toFixed(3).replace('.',',')}</td>
+    <td>
+      <div class="bar-wrap">
+        <div class="bar-bg"><div class="bar-fill-red" style="width:${Math.min(pct,100).toFixed(1)}%;"></div></div>
+        <span style="font-size:10px;color:#888;min-width:30px">${pct.toFixed(0)}%</span>
+      </div>
+    </td>
+    <td><span class="badge ${sc}">${status}</span></td>`;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
